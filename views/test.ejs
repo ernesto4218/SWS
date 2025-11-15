@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camera Object Detection</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #111;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    video, canvas {
+      border-radius: 10px;
+      margin-top: 20px;
+      max-width: 90%;
+    }
+  </style>
+</head>
+<body>
+  <h2>🎥 Live Object Detection</h2>
+  <video id="webcam" autoplay playsinline width="640" height="480" style="display: none;"></video>
+  <canvas id="canvas" width="640" height="480"></canvas>
+
+  <script>
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let model;
+
+    // Load the COCO-SSD model
+    async function loadModel() {
+      model = await cocoSsd.load();
+      console.log("Model loaded!");
+      startCamera();
+    }
+
+    // Start the camera
+    async function startCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+
+      video.addEventListener('loadeddata', () => {
+        detectFrame();
+      });
+    }
+
+    // Draw predictions on canvas
+    async function detectFrame() {
+      const predictions = await model.detect(video);
+
+      // Draw the video frame
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Draw boxes and labels
+      predictions.forEach(pred => {
+        ctx.beginPath();
+        ctx.rect(...pred.bbox);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'lime';
+        ctx.fillStyle = 'lime';
+        ctx.stroke();
+        ctx.fillText(
+          `${pred.class} (${(pred.score * 100).toFixed(1)}%)`,
+          pred.bbox[0],
+          pred.bbox[1] > 10 ? pred.bbox[1] - 5 : 10
+        );
+      });
+
+      requestAnimationFrame(detectFrame);
+    }
+
+    loadModel();
+  </script>
+</body>
+</html>
