@@ -1,7 +1,6 @@
-import { start } from 'repl';
-import db from './db.js';       // Now process.env.DBNAME will be defined
-import * as queries from './queries.js';
-
+import { start } from "repl";
+import db from "./db.js";
+import * as queries from "./queries.js";
 
 // Insert new row
 export async function insertItem(...values) {
@@ -40,8 +39,20 @@ export async function upsertItem(...values) {
 }
 
 // get
-export async function GET_ALL_SENSOR_LEVEL() {
-  const [result] = await db.execute(queries.GET_ALL_SENSOR_LEVEL);
+export async function GET_ALL_SETTINGS() {
+  const [result] = await db.execute(queries.GET_ALL_SETTINGS);
+  return result;
+}
+
+export async function GET_ALL_DETECTED_WASTE_BY_DAYS(dayFilter) {
+  const query = queries.GET_ALL_DETECTED_WASTE_BY_DAYS(dayFilter);
+  const [result] = await db.execute(query);
+  return result;
+}
+
+export async function GET_ALL_SENSOR_LEVEL_BY_DAYS(dayFilter) {
+  const query = queries.GET_ALL_SENSOR_LEVEL_BY_DAYS(dayFilter);
+  const [result] = await db.execute(query);
   return result;
 }
 
@@ -51,14 +62,31 @@ export async function GET_ALL_DETECTED_WASTE() {
 }
 
 
+export async function GET_ALL_SENSOR_LEVEL() {
+  const [result] = await db.execute(queries.GET_ALL_SENSOR_LEVEL);
+  return result;
+}
+
 // post
 export async function INSERT_SENSOR_READINGS(sensor_id, level) {
-  const [result] = await db.execute(queries.INSERT_SENSOR_READINGS, [sensor_id, level]);
+  const [result] = await db.execute(queries.INSERT_SENSOR_READINGS, [
+    sensor_id,
+    level,
+  ]);
   return result.insertId;
 }
 
 export async function INSERT_WASTE_DETECTED(name, confidence) {
-  const [result] = await db.execute(queries.INSERT_WASTE_DETECTED, [name, confidence]);
+  const [result] = await db.execute(queries.INSERT_WASTE_DETECTED, [
+    name,
+    confidence,
+  ]);
   return result.insertId;
 }
+
+export async function UPDATE_ALL_SETTINGS(sql, params) {
+  const [result] = await db.execute(sql, params);
+  return result;
+}
+
 

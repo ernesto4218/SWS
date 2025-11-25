@@ -1,7 +1,7 @@
 let allowedClasses = [];
 let denyClasses = [];
 
-const settingsformparent = document.getElementById('settingsformparent');
+// const settingsformparent = document.getElementById('settingsformparent');
 
 async function startCamera() {
     const video = document.querySelector("video");
@@ -20,35 +20,42 @@ async function startCamera() {
 window.addEventListener("DOMContentLoaded", startCamera);
 const TRASH_BINS = {
     "Biodegradable": {
-        "classes": ["paper"],
-        "servo_url": "http://10.0.0.1/S1/80",
-        "sensor_url": "http://10.0.0.1/U1",
-        "color": "#228B22"
+        "servo_url": "http://127.0.0.1/open-basket-one",
+        "sensor_url": "http://127.0.0.1/get-basket-one",
     },
     "Non-Biodegradable": {
-        "classes": ["ballpen", "color_pen", "pencil", "pentel_pen", "whiteboard_marker"],
-        "servo_url": "http://10.0.0.1/S2/80",
-        "sensor_url": "http://10.0.0.1/U2",
-        "color": "#4682B4"
+        "servo_url": "http://127.0.0.1/open-basket-two",
+        "sensor_url": "http://127.0.0.1/get-basket-two",
     },
     "Recyclable": {
-        "classes": ["bottle", "highlighter"],
-        "servo_url": "http://10.0.0.1/S3/70",
-        "sensor_url": "http://10.0.0.1/U3",
-        "color": "#FFD700"
+        "servo_url": "http://127.0.0.1/open-basket-three",
+        "sensor_url": "http://127.0.0.1/get-basket-three",
+    },
+    "Unknown": {
+        "servo_url": "http://127.0.0.1/unknown",
     }
 };
+
+const dataEl = document.querySelector('.datael');
+const serverData = dataEl ? JSON.parse(dataEl.getAttribute('data-settings')) : {};
+console.log(serverData);
 
 // console.log(TRASH_BINS['Biodegradable'].sensor_url);
 
 // load model
-const MODEL_URL = "/tm/" + settingsformparent.querySelector("#modelurl").value;
-let predictionval = settingsformparent.querySelector("#prediction").value;
-let fetchsensorrps = settingsformparent.querySelector("#fetchrps").value;
+// const MODEL_URL = "/tm/" + settingsformparent.querySelector("#modelurl").value;
+const MODEL_URL = "/tm/" + getSetting("model") + "/";
+let predictionval = Number(getSetting("prediction"));
+let fetchsensorrps = Number(getSetting("sensor_readings"));
 
-console.log(fetchsensorrps);
+// console.log(fetchsensorrps);
 let model, webcam, labelContainer, maxPredictions;
 let currentIndexCensor = 0;
+
+function getSetting(name) {
+  const item = serverData.find(x => x.name === name);
+  return item ? item.value : null;
+}
 
 async function sendServoRequest(url) {
     try {
@@ -82,6 +89,11 @@ RecyBTN.onclick = function() {
     sendServoRequest(TRASH_BINS["Recyclable"].servo_url, "recyclable");
 };
 
+const UnknownBTN = document.getElementById('UnknownBTN');
+UnknownBTN.onclick = function() {
+    sendServoRequest(TRASH_BINS["Unknown"].servo_url, "unknown");
+};
+
 
 const BIN_NAMES = Object.keys(TRASH_BINS);
 let currentBinIndex = 0;
@@ -90,17 +102,18 @@ async function fetchu1() {
   try {
     const response = await fetch(TRASH_BINS['Biodegradable'].sensor_url);
     const data = await response.json();
+    const distance = data.distance;
 
-    document.querySelector('.binu1').style.height = data.U1 + "%";
-    document.querySelector('.binu1text').textContent = data.U1 + "%";
+    document.querySelector('.binu1').style.height = distance + "%";
+    document.querySelector('.binu1text').textContent = distance + "%";
     
     console.log(`✅ Updated bin:`, data);
     
-    if (data.U1 && data.U1 > 0){
+    if (data && distance > 0){
         const save_data = await (await fetch('/send-sensor-level', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sensor_id: 1, level: data.U1 })
+            body: JSON.stringify({ sensor_id: 1, level: distance })
         })).json();
 
         console.log(save_data);
@@ -114,16 +127,17 @@ async function fetchu2() {
   try {
     const response = await fetch(TRASH_BINS['Non-Biodegradable'].sensor_url);
     const data = await response.json();
+    const distance = data.distance;
 
-    document.querySelector('.binu2').style.height = data.U2 + "%";
-    document.querySelector('.binu2text').textContent = data.U2 + "%";
+    document.querySelector('.binu2').style.height = distance + "%";
+    document.querySelector('.binu2text').textContent = distance + "%";
     
     console.log(`✅ Updated bin:`, data);
-    if (data.U2 && data.U2 > 0){
+    if (data && distance > 0){
         const save_data = await (await fetch('/send-sensor-level', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sensor_id: 2, level: data.U2 })
+            body: JSON.stringify({ sensor_id: 2, level: distance })
         })).json();
 
         console.log(save_data);
@@ -138,17 +152,18 @@ async function fetchu3() {
   try {
     const response = await fetch(TRASH_BINS['Recyclable'].sensor_url);
     const data = await response.json();
+    const distance = data.distance;
 
     document.querySelector('.binu3').style.height = data.U3 + "%";
     document.querySelector('.binu3text').textContent = data.U3 + "%";
     
     console.log(`✅ Updated bin:`, data);
 
-    if (data.U3 && data.U3 > 0){
+    if (data && distance > 0){
         const save_data = await (await fetch('/send-sensor-level', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sensor_id: 3, level: data.U3 })
+            body: JSON.stringify({ sensor_id: 3, level: distance })
         })).json();
 
         console.log(save_data);
@@ -158,41 +173,30 @@ async function fetchu3() {
     console.error(`❌ Error fetching data:`, error);
   }
 }
-// Utility to add a delay
+
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function fetchAllBins() {
     try {
-        try {
-            await fetchu1();
-        } catch (err) {
-            console.error('❌ Error fetching Biodegradable:', err);
-        }
+        await fetchu1().catch(() => {});
+        await delay(500);
 
-        await delay(1000);
-        try {
-            await fetchu2();
-        } catch (err) {
-            console.error('❌ Error fetching Non-Biodegradable:', err);
-        }
+        await fetchu2().catch(() => {});
+        await delay(500);
 
-        await delay(1500);
-        try {
-            await fetchu3();
-        } catch (err) {
-            console.error('❌ Error fetching Recyclable:', err);
-        }
-
+        await fetchu3().catch(() => {});
     } catch (err) {
-        console.error('❌ Unexpected error in fetchAllBins:', err);
+        // Unexpected error in sequence
+        // console.error('Unexpected error in fetchAllBins:', err);
     } finally {
-        setTimeout(fetchAllBins, 10000);
+        setTimeout(fetchAllBins, fetchsensorrps); 
     }
 }
 
 fetchAllBins();
+
 
 // init all
 function openall(){
@@ -295,7 +299,6 @@ async function predict() {
 
     const confidence = bestPrediction.probability * 100;
 
-    // ✅ Maintain confidence >= 90% for 2 seconds before triggering
     if (bestPrediction.probability >= predictionval) {
         if (!highConfidenceStart) {
             highConfidenceStart = Date.now(); // mark the start
@@ -303,67 +306,47 @@ async function predict() {
         } else {
             const elapsed = Date.now() - highConfidenceStart;
             if (elapsed >= 1000) { // 2 seconds passed
+                console.log("🔥 Confidence stable for 2 seconds — triggering action!");
+                console.log(`✅ Best Prediction: ${bestPrediction.className} (${confidence.toFixed(2)}%)`);
 
-                if (allowedClasses.includes(bestPrediction.className)){
-                    console.log("🔥 Confidence stable for 2 seconds — triggering action!");
-                    console.log(`✅ Best Prediction: ${bestPrediction.className} (${confidence.toFixed(2)}%)`);
-
-                    if (bestPrediction.className === "recyclable") {
-                        console.log("Recyclable");
-                        RecyBTN.click();
-                    } else if (bestPrediction.className === "biodegradable") {
-                        console.log("Biodegradable");
-                        BioBTN.click();
-                    } else if (bestPrediction.className === "nonbiodegradable") {
-                        console.log("Non-Biodegradable");
-                        NonBioBTN.click();
-                    }
-
-                    const saveResponse = await fetch('/send-waste-detected', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: bestPrediction.className, confidence: predictionval })
-                    });
-
-                    const save_data = await saveResponse.json();
-                    console.log(save_data);
-                    
-                    highConfidenceStart = null; 
-                    // ⏳ Delay next prediction for 3 seconds
-                    setTimeout(() => {
-                        isPredicting = false;
-                        console.log("Ready for next prediction...");
-                    }, 3000);
-                    return;
-                } else if (denyClasses.includes(bestPrediction.className)){
+                if (bestPrediction.className === "recyclable") {
+                    console.log("Recyclable");
+                    RecyBTN.click();
+                } else if (bestPrediction.className === "biodegradable") {
+                    console.log("Biodegradable");
+                    BioBTN.click();
+                } else if (bestPrediction.className === "nonbiodegradable") {
+                    console.log("Non-Biodegradable");
+                    NonBioBTN.click();
+                } else {
                     alertcontainer.classList.add("flex");
                     alertcontainer.classList.remove("hidden");
 
-                    const saveResponse = await fetch('/send-waste-detected', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: bestPrediction.className, confidence: predictionval })
-                    });
-
-                    const save_data = await saveResponse.json();
-                    console.log(save_data);
-                    
                     highConfidenceStart = null; 
-                    // ⏳ Delay next prediction for 3 seconds
                     setTimeout(() => {
                         isPredicting = false;
                         console.log("Ready for next prediction...");
                     }, 3000);
-                    return;
-                } else {
-                    console.log("Class is not allowed: ", bestPrediction.className);
-                    setTimeout(() => {
-                        isPredicting = false;
-                        console.log("Ready for next prediction...");
-                    }, 3000);
+                    
                     return;
                 }
+
+                const saveResponse = await fetch('/send-waste-detected', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: bestPrediction.className, confidence: predictionval })
+                });
+
+                const save_data = await saveResponse.json();
+                console.log(save_data);
                 
+                highConfidenceStart = null; 
+
+                setTimeout(() => {
+                    isPredicting = false;
+                    console.log("Ready for next prediction...");
+                }, 3000);
+                return;
             }
         }
     } else {
@@ -401,244 +384,3 @@ function updateDenyClasses() {
 document.addEventListener('change', updateDenyClasses);
 updateDenyClasses();
 
-
-// settings
-const settingsbtn = document.getElementById('settingsbtn');
-const closesettingsform = document.getElementById('closesettingsform');
-const settingsform = document.getElementById('settingsform');
-
-settingsbtn.onclick = function() {
-    settingsformparent.classList.remove('hidden');
-    settingsformparent.classList.add('flex');
-};
-
-closesettingsform.onclick = function() {
-    settingsformparent.classList.remove('flex');
-    settingsformparent.classList.add('hidden');
-};
-
-// analyics
-let chartInstance; // keep reference to chart
-
-function sensorchart(range = null) {
-    const sensor_levels = JSON.parse(document.getElementById('sensorchart').getAttribute('data-sensor_levels'));
-
-    // Filter by range if provided
-    const now = new Date();
-    let startDate;
-    switch(range) {
-        case 'today':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            break;
-        case 'yesterday':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-            break;
-        case '7days':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-            break;
-        case '30days':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
-            break;
-        case '90days':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 90);
-            break;
-        default:
-            startDate = null; // no filtering
-    }
-
-    const filteredLevels = startDate ? sensor_levels.filter(item => new Date(item.date_added) >= startDate) : sensor_levels;
-
-    // Group data by sensor_id
-    const sensors = {
-        "1": { name: "Biodegradable", color: "#22C55E", data: [] },
-        "2": { name: "Non-Biodegradable", color: "#EF4444", data: [] },
-        "3": { name: "Recyclable", color: "#CA8A04", data: [] },
-    };
-
-    const timestampsSet = new Set();
-
-    filteredLevels.forEach(item => {
-        const sensor = sensors[item.sensor_id];
-        if (sensor) {
-            const date = new Date(item.date_added);
-            const formattedDate = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
-            sensor.data.push({ x: formattedDate, y: parseFloat(item.level) });
-            timestampsSet.add(formattedDate);
-        }
-    });
-
-    const timestamps = Array.from(timestampsSet).sort();
-
-    const series = Object.values(sensors).map(sensor => ({
-        name: sensor.name,
-        data: sensor.data.map(d => ({ x: d.x, y: d.y })),
-        color: sensor.color
-    }));
-
-    const options = {
-        chart: { type: 'area', height: 300, fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
-        title: { text: "Sensor Fill Levels", align: "left", style: { fontSize: '12px', fontWeight: 'bold', color: '#333' } },
-        dataLabels: { enabled: false },
-        stroke: { width: 3 },
-        fill: { type: 'gradient', gradient: { opacityFrom: 0.55, opacityTo: 0, shadeIntensity: 1 } },
-        series: series,
-        xaxis: { type: 'category', categories: timestamps, labels: { rotate: -45, rotateAlways: true, trim: false, style: { fontSize: '10px', fontFamily: 'Inter, sans-serif' } } },
-        yaxis: { title: { text: 'Level' } },
-        tooltip: { x: { format: 'HH:mm:ss' } },
-    };
-
-    if (!chartInstance) {
-        chartInstance = new ApexCharts(document.getElementById("sensorchart"), options);
-        chartInstance.render();
-    } else {
-        chartInstance.updateOptions({ series: series, xaxis: { categories: timestamps } });
-    }
-}
-
-sensorchart();
-
-document.querySelectorAll('.dropdown-item').forEach(item => {
-    item.addEventListener('click', e => {
-        e.preventDefault();
-        const range = item.dataset.range;
-        sensorchart(range);
-    });
-});
-
-const waste_detected = JSON.parse(document.getElementById('detectionchart').getAttribute('data-waste_detected'));
-console.log(waste_detected);
-
-let detectionChart = null;
-
-
-function wasteChart(range = null) {
-    const waste_detected = JSON.parse(document.getElementById('detectionchart').getAttribute('data-waste_detected'));
-
-    // Filter by range if provided
-    const now = new Date();
-    let startDate;
-    switch (range) {
-        case 'today':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            break;
-        case 'yesterday':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-            break;
-        case '7days':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-            break;
-        case '30days':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
-            break;
-        case '90days':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 90);
-            break;
-        default:
-            startDate = null;
-    }
-
-    const filteredData = startDate
-        ? waste_detected.filter(item => new Date(item.date_added) >= startDate)
-        : waste_detected;
-
-    // Group data by waste type
-    const wastes = {
-        biodegradable: { name: "Biodegradable", color: "#22C55E", data: [] },
-        nonbiodegradable: { name: "Non-Biodegradable", color: "#EF4444", data: [] },
-        recyclable: { name: "Recyclable", color: "#CA8A04", data: [] },
-    };
-
-    filteredData.forEach(item => {
-        const type = item.waste_type.toLowerCase();
-        const waste = wastes[type];
-        if (waste) {
-            const date = new Date(item.date_added);
-            const formattedDate = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes()
-                .toString()
-                .padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
-            waste.data.push({ x: formattedDate, y: parseFloat(item.confidence) });
-        }
-    });
-
-    const series = Object.values(wastes).map(waste => ({
-        name: waste.name,
-        data: waste.data,
-        color: waste.color,
-    }));
-
-    const options = {
-        chart: {
-            type: 'area',
-            height: 300,
-            fontFamily: 'Inter, sans-serif',
-            toolbar: { show: false },
-        },
-        title: {
-            text: "Waste Detection Confidence Over Time",
-            align: "left",
-            style: { fontSize: '12px', fontWeight: 'bold', color: '#333' },
-        },
-        dataLabels: { enabled: false },
-        stroke: { width: 3 },
-        fill: {
-            type: 'gradient',
-            gradient: { opacityFrom: 0.55, opacityTo: 0, shadeIntensity: 1 },
-        },
-        series: series,
-        xaxis: {
-            type: 'category',
-            labels: {
-                rotate: -45,
-                rotateAlways: true,
-                trim: false,
-                style: { fontSize: '10px', fontFamily: 'Inter, sans-serif' },
-            },
-        },
-        yaxis: { title: { text: 'Confidence (%)' }, min: 0, max: 100 },
-        tooltip: {
-            shared: true,
-            intersect: false,
-            custom: function({ series, seriesIndex, dataPointIndex, w }) {
-                const wasteType = w.config.series[seriesIndex].name;
-                const label = w.globals.seriesX[seriesIndex][dataPointIndex];
-                const value = w.globals.series[seriesIndex][dataPointIndex];
-                return `
-                    <div style="padding:5px;">
-                        <strong>${wasteType}</strong><br>
-                        Time: ${label}<br>
-                        Confidence: ${value.toFixed(2)}%
-                    </div>
-                `;
-            },
-        },
-    };
-
-    // Render or update chart
-    if (!window.wasteChartInstance) {
-        window.wasteChartInstance = new ApexCharts(document.getElementById("detectionchart"), options);
-        window.wasteChartInstance.render();
-    } else {
-        window.wasteChartInstance.updateOptions({
-            series: series,
-            xaxis: {
-                ...options.xaxis,
-                categories: series.flatMap(s => s.data.map(d => d.x)),
-            },
-        }, true, true); // 👈 forces full re-render with animation
-    }
-}
-
-
-
-// ✅ Initial render
-wasteChart('7days');
-
-document.querySelectorAll('#lastDaysdropdownwaste .dropdown-item').forEach(btn => {
-    btn.addEventListener('click', e => {
-        e.preventDefault();
-        const range = btn.getAttribute('data-range');
-        wasteChart(range);
-
-        document.getElementById('dropdownDefaultButtonwaste').textContent = btn.textContent;
-    });
-});

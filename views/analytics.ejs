@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link href="/stylesheets/output.css" rel="stylesheet" />
+  <link href="/flowbite/min.css" rel="stylesheet" />
+
+</head>
+<body>
+  <%- include('header') %>
+
+  <div class="flex flex-col p-5">
+    <div class="flex flex-col w-full items-start mb-10">
+      <!-- Button -->
+      <button
+        id="dropdownDefaultButton"
+        data-dropdown-toggle="lastDaysdropdown"
+        data-dropdown-placement="bottom"
+        class="text-sm font-medium text-gray-500 hover:text-gray-900 text-center inline-flex items-center"
+        type="button">
+        <%= dropTitle %>
+        <svg class="w-2.5 m-2.5 ms-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="m1 1 4 4 4-4"/>
+        </svg>
+      </button>
+
+      <!-- Dropdown -->
+      <div id="lastDaysdropdown" class="z-10 hidden bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-44">
+        <ul class="py-2 text-sm text-gray-700" aria-labelledby="dropdownDefaultButton">
+          <li>
+            <a href="/analytics/?day=Yesterday" class="block px-4 py-2 hover:bg-gray-100">Yesterday</a>
+          </li>
+          <li>
+            <a href="/analytics/?day=Today" class="block px-4 py-2 hover:bg-gray-100">Today</a>
+          </li>
+          <li>
+            <a href="/analytics/?day=7days" class="block px-4 py-2 hover:bg-gray-100">Last 7 days</a>
+          </li>
+          <li>
+            <a href="/analytics/?day=30Days" class="block px-4 py-2 hover:bg-gray-100">Last 30 days</a>
+          </li>
+          <li>
+            <a href="/analytics/?day=90Days" class="block px-4 py-2 hover:bg-gray-100">Last 90 days</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="w-full bg-white rounded-lg shadow-sm p-4 md:p-6">
+      <div class="flex justify-between">
+        <div>
+        <h5 class="leading-none text-3xl font-bold text-gray-900 pb-2">
+          <%= analytics.length.toLocaleString() %>
+        </h5>
+          <p class="text-base font-normal text-gray-500">Results this <%= dropTitle %></p>
+        </div>
+      </div>
+
+      <div class="flex flex-row gap-5">
+        <div data-analytics="<%= JSON.stringify(analytics) %>" id="waste-chart" class="w-full"></div>
+        <div data-analytics="<%= JSON.stringify(sensor_analytics) %>" id="sensor-chart" class="w-full"></div>
+      </div>
+      
+    </div>
+  </div>
+
+  <script src="/flowbite/flowbite.min.js"></script>
+  <script src="/flowbite/apexcharts.min.js"></script>
+  <script src="/javascripts/analytics.js"></script>
+</body>
+</html>
