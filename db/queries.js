@@ -39,5 +39,5 @@ export function GET_ALL_SENSOR_LEVEL_BY_DAYS(dayFilter) {
 
 // post
 export const INSERT_SENSOR_READINGS = 'INSERT INTO sensor_fill_levels (sensor_id, level) VALUES (?, ?)';
-export const INSERT_WASTE_DETECTED = 'INSERT INTO sensor_fill_levels (sensor_id, level) VALUES (?, ?)';
+export const INSERT_WASTE_DETECTED = 'INSERT INTO detected_waste (waste_type, confidence) VALUES (?, ?)';
 export const UPDATE_SETTING_BY_ID = 'UPDATE system_settings SET value = ? WHERE id = ?';

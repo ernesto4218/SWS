@@ -136,6 +136,7 @@ router.post("/send-waste-detected", async function (req, res) {
     const { name, confidence } = req.body;
 
     await INSERT_WASTE_DETECTED(name, confidence || 0);
+    console.log("recorded " , name);
     res.json({ status: "success", name });
   } catch (error) {
     console.error(error);
